@@ -1,0 +1,4 @@
+anthropic
+typer
+python-dotenv
+checkov
