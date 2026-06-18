@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: web }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: web } }
+  template:
+    metadata: { labels: { app: web } }
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest          # ISSUE: mutable 'latest' tag
+          securityContext:
+            privileged: true            # ISSUE: privileged container
+            runAsNonRoot: false         # ISSUE: runs as root
+          # ISSUE: no resource limits
+          # ISSUE: no readiness/liveness probe
