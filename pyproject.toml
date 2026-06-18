@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-kubernetes-iac-security-reviewer"
+version = "0.1.0"
+description = "Review IaC and Kubernetes files with security scanners."
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic",
+    "checkov",
+    "python-dotenv",
+    "typer",
+]
+
+[project.scripts]
+review = "cli:run"
+
+[tool.setuptools]
+py-modules = ["agent", "cli", "tools"]
