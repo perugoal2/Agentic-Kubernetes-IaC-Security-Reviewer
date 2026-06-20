@@ -1,5 +1,5 @@
 import json
-import os
+import os, difflib, pathlib
 import shutil
 import subprocess
 import sys
@@ -100,15 +100,55 @@ def run_trivy(path: str) -> dict:
             })
     return {"tool": "trivy", "count": len(findings), "findings": findings}
     
-if __name__ == "__main__":
-    # result = run_checkov(
-    #     str(Path(__file__).resolve().parent / "fixtures" / "bad.yaml")
-    # )
-    # print(json.dumps(result, indent=2))
+PATCH_DIR = "patches"
 
-    result = run_trivy(
-        str(Path(__file__).resolve().parent / "fixtures" / "bad.yaml")
-    )
-    print(json.dumps(result, indent=2))
+def _patch_root_for(root_path: str | None, path: str) -> Path:
+    base = Path(root_path or path).resolve()
+    anchor = base if base.is_dir() else base.parent
+    return Path(PATCH_DIR) / anchor.name
 
+
+def _patched_target_path(path: str, root_path: str | None) -> Path:
+    source = Path(path).resolve()
+    patch_root = _patch_root_for(root_path, path)
+
+    if root_path:
+        base = Path(root_path).resolve()
+        if base.is_dir():
+            relative_path = source.relative_to(base)
+            return patch_root / relative_path
+
+    return patch_root / source.name
+
+
+def propose_patch(path: str, fixed_content: str, root_path: str | None = None) -> dict:
+    """Write a corrected copy of `path` (never touches the original).
+    Returns the patched path, patched root, and a unified diff for display/validation."""
+    original = pathlib.Path(path).read_text()
+    patched_path = _patched_target_path(path, root_path)
+    patched_path.parent.mkdir(parents=True, exist_ok=True)
+    pathlib.Path(patched_path).write_text(fixed_content)
+
+    diff = "".join(difflib.unified_diff(
+        original.splitlines(keepends=True),
+        fixed_content.splitlines(keepends=True),
+        fromfile=f"a/{path}", tofile=f"b/{patched_path.as_posix()}",
+    ))
+    return {
+        "patched_path": str(patched_path),
+        "patched_root": str(_patch_root_for(root_path, path)),
+        "diff": diff or "(no changes)",
+    }
+
+def validate_patch(original_path, patched_path):
+    before = run_checkov(original_path)["findings"]
+    after  = run_checkov(patched_path)["findings"]
+    before_ids = {(f["id"], f["resource"]) for f in before}
+    after_ids  = {(f["id"], f["resource"]) for f in after}
+    return {
+        "resolved": list(before_ids - after_ids),
+        "remaining": list(after_ids),
+        "new":       list(after_ids - before_ids),  # catch fixes that introduce issues
+        "success": not after_ids,
+    }
     
