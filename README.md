@@ -1,5 +1,7 @@
 # Agentic Kubernetes IaC Security Reviewer
 
+[![PR Tests](https://github.com/perugoal2/Agentic-Kubernetes-IaC-Security-Reviewer/actions/workflows/pr-tests.yml/badge.svg)](https://github.com/perugoal2/Agentic-Kubernetes-IaC-Security-Reviewer/actions/workflows/pr-tests.yml)
+
 An agent-driven CLI that reviews Kubernetes and IaC files with security scanners, produces a prioritized human-readable report, and can stage remediated file copies in a separate patched workspace.
 
 ## Why This Exists
