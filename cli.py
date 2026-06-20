@@ -11,9 +11,15 @@ app = typer.Typer(add_completion=False)
 def main(
     path: Path = typer.Argument(..., exists=True, resolve_path=True, help="File or directory to review."),
     output: Path | None = typer.Option(None, "--output", "-o", help="Write the review report to a file."),
+    max_fix_attempts: int = typer.Option(
+        3,
+        "--max-fix-attempts",
+        min=1,
+        help="Maximum remediation retries before the agent stops patching.",
+    ),
 ):
     """Review IaC/K8s files at PATH for security issues."""
-    result = review(str(path))
+    result = review(str(path), max_fix_attempts=max_fix_attempts)
 
     if output is not None:
         output.parent.mkdir(parents=True, exist_ok=True)

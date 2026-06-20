@@ -1,6 +1,6 @@
 # Agentic Kubernetes IaC Security Reviewer
 
-An agent-driven CLI that reviews Kubernetes and IaC files with security scanners, then turns raw findings into a prioritized, readable remediation report.
+An agent-driven CLI that reviews Kubernetes and IaC files with security scanners, produces a prioritized human-readable report, and can stage remediated file copies in a separate patched workspace.
 
 ## Why This Exists
 
@@ -10,13 +10,16 @@ Most scanner output is accurate but noisy. This project keeps the scanner signal
 - explain the real risk in plain English
 - suggest concrete remediations
 - generate a report you can read or save directly to a file
+- stage proposed fixed file copies separately from your source files
 
 ## Features
 
 | Feature | What it does |
 | --- | --- |
 | CLI review command | Run `review <path>` against a file or directory |
-| Agent-generated report | Produces a concise, prioritized security review |
+| Agent-generated report | Produces a concise, prioritized security review in stdout or a report file |
+| Bounded remediation loop | Retries failed fixes up to a configurable limit with no infinite patch loop |
+| Folder remediation workspace | Preserves relative paths so multiple files in a reviewed folder can be patched together under `patches/` |
 | Checkov integration | Scans Kubernetes and IaC config with structured output |
 | Trivy integration | Uses Trivy config scanning when available on your machine |
 | File output | Save the generated report with `--output` or `-o` |
@@ -54,7 +57,29 @@ flowchart LR
 | `agent.py` | Anthropic-powered review logic |
 | `tools.py` | Scanner wrappers for Checkov and Trivy |
 | `fixtures/` | Sample insecure manifests for testing |
+| `patches/` | Generated patched copies created during remediation attempts |
 | `report.md` | Example generated report output |
+
+## Demo Files
+
+The repo includes a small set of demo inputs and patched outputs so you can see the remediation flow end to end.
+
+There are two different output types in this project:
+
+- Report output: the markdown-style review printed to stdout or written with `--output`.
+- Remediation output: generated fixed file copies written under `patches/`.
+
+Source demo files in `fixtures/`:
+
+- `fixtures/bad.yaml`
+- `fixtures/app/app.yaml`
+
+Generated patched demo files in `patches/`:
+
+- `patches/fixtures/bad.yaml`
+- `patches/fixtures/app/app.yaml`
+
+The files under `fixtures/` are the insecure examples you review. The files under `patches/` are generated outputs from remediation attempts and are safe to inspect, diff, or delete between runs.
 
 ## Prerequisites
 
@@ -114,6 +139,31 @@ review .\fixtures\bad.yaml
 review .\fixtures\bad.yaml --output .\report.md
 ```
 
+`--output` only controls where the written review report goes. It does not change where remediated file copies are staged.
+
+### Limit remediation retries
+
+```powershell
+review .\fixtures\bad.yaml --max-fix-attempts 2
+```
+
+The agent stops retrying after the first successful validation or when the retry budget is exhausted.
+
+### Remediate a folder
+
+When you review a directory, the remediation flow writes remediated file copies into a mirrored workspace under `patches/<folder-name>/...` so multiple files can be fixed together and validated as a directory.
+
+Example:
+
+```powershell
+review .\fixtures
+```
+
+This can produce patched outputs such as:
+
+- `patches/fixtures/bad.yaml`
+- `patches/fixtures/app/app.yaml`
+
 Short flag:
 
 ```powershell
@@ -143,6 +193,8 @@ CRITICAL: Privileged container configuration
 Risk: Container escape and host compromise.
 Fix: Set privileged to false and disable privilege escalation.
 ```
+
+That report is separate from any remediated file copies written under `patches/`.
 
 ## Trivy Support
 
@@ -214,7 +266,10 @@ python -m pip install -e .
 - Checkov is wired directly into the Python workflow.
 - Trivy is used when available as an external CLI.
 - The `review` command prints the report to stdout.
-- `--output` writes the same report to a file.
+- `--output` writes that report to a file such as `report.md`.
+- `--max-fix-attempts` bounds remediation retries and prevents infinite fix loops.
+- Directory remediation preserves relative paths in `patches/` so the agent can stage multi-file fixes safely.
+- Files under `patches/` are generated remediation artifacts, not the main review report.
 
 ## Quick Start
 

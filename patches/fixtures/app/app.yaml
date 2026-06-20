@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      serviceAccountName: webapp
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: nginx@sha256:67682bda769fae1ccf5183192c8deb3f55fb60c85960e169f1fe590522d51b7e
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: run
+              mountPath: /var/run
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: webapp
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: web
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: production
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
