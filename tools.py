@@ -151,4 +151,11 @@ def validate_patch(original_path, patched_path):
         "new":       list(after_ids - before_ids),  # catch fixes that introduce issues
         "success": not after_ids,
     }
-    
+
+def search_controls(query: str, k: int = 3)-> dict:
+    q = _model.encode([query]).tolist()
+    res = _col.query(query_embeddings=q, n_results=k)
+    return {"matches": [
+        {"id": i, "title": m["title"], "text": d, "source": m["source"]}
+        for i, d, m in zip(res["ids"][0], res["documents"][0], res["metadatas"][0])
+    ]}

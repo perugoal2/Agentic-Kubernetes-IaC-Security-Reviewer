@@ -1,4 +1,6 @@
 anthropic
+chromadb
 typer
 python-dotenv
 checkov
+sentence-transformers

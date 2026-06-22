@@ -1,7 +1,7 @@
 import anthropic
 import json
 import os
-from tools import run_checkov, run_trivy, propose_patch, validate_patch
+from tools import run_checkov, run_trivy, propose_patch, validate_patch, search_controls
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -81,6 +81,7 @@ validate_patch will return the resolved and remaining issues, so you can confirm
 If validate_patch reports remaining or new issues and attempts_left is above 0, read the patched files and try again.
 When success is true, or attempts_left is 0, stop patching and give a final summary.
 You have at most {max_fix_attempts} remediation attempts.
+For each top finding, call search_controls with the finding text and cite the returned control id and title.
 """
 
 
@@ -95,6 +96,8 @@ def run_tool(name, inp):
         return propose_patch(inp["path"], inp["fixed_content"], inp.get("root_path"))
     if name == "validate_patch":
         return validate_patch(inp["original_path"], inp["patched_path"])
+    if name == "search_controls":
+        return search_controls(inp["query"], inp.get("k", 3))
 
     return {"error": "unknown tool"}
 

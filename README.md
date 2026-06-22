@@ -13,6 +13,7 @@ Most scanner output is accurate but noisy. This project keeps the scanner signal
 - suggest concrete remediations
 - generate a report you can read or save directly to a file
 - stage proposed fixed file copies separately from your source files
+- cite the most relevant CIS, NSA, or AWS control for each top finding
 
 ## Features
 
@@ -20,6 +21,7 @@ Most scanner output is accurate but noisy. This project keeps the scanner signal
 | --- | --- |
 | CLI review command | Run `review <path>` against a file or directory |
 | Agent-generated report | Produces a concise, prioritized security review in stdout or a report file |
+| Control corpus citations | Embeds CIS, NSA, and AWS controls into local Chroma storage and retrieves relevant controls for findings |
 | Bounded remediation loop | Retries failed fixes up to a configurable limit with no infinite patch loop |
 | Folder remediation workspace | Preserves relative paths so multiple files in a reviewed folder can be patched together under `patches/` |
 | Checkov integration | Scans Kubernetes and IaC config with structured output |
@@ -44,9 +46,11 @@ flowchart LR
 	B --> C[Agent review loop]
 	C --> D[Run Checkov]
 	C --> E[Run Trivy if available]
+	C --> I[Search embedded controls]
 	C --> F[Read target files]
 	D --> G[LLM prioritizes and explains findings]
 	E --> G
+	I --> G
 	F --> G
 	G --> H[Markdown-style security review report]
 ```
@@ -57,7 +61,9 @@ flowchart LR
 | --- | --- |
 | `cli.py` | User-facing CLI entrypoint |
 | `agent.py` | Anthropic-powered review logic |
+| `controls/` | Control corpus and local indexing script for semantic control lookup |
 | `tools.py` | Scanner wrappers for Checkov and Trivy |
+| `chroma/` | Local Chroma persistence directory created after indexing controls |
 | `fixtures/` | Sample insecure manifests for testing |
 | `patches/` | Generated patched copies created during remediation attempts |
 | `report.md` | Example generated report output |
@@ -92,6 +98,7 @@ Before you run the CLI, make sure you have:
 - an Anthropic API key available in your environment
 - Checkov installed in the project environment
 - Trivy installed only if you want Trivy findings included
+- `sentence-transformers` and `chromadb` installed if you want control search and citations enabled
 
 ## Setup
 
@@ -127,6 +134,16 @@ Persistent user environment variable:
 
 Then restart your terminal or VS Code window.
 
+### 4. Build or refresh the local control index
+
+The agent can cite relevant CIS, NSA, and AWS guidance by embedding the local control corpus from `controls/controls.json` into a Chroma collection stored under `./chroma`.
+
+```powershell
+python -m controls.controls
+```
+
+Run this again any time you update the control corpus.
+
 ## Usage
 
 ### Review a file
@@ -134,6 +151,8 @@ Then restart your terminal or VS Code window.
 ```powershell
 review .\fixtures\bad.yaml
 ```
+
+When control search is indexed, the report can cite the most relevant control ID and title for each top finding.
 
 ### Save the report to a file
 
@@ -267,6 +286,7 @@ python -m pip install -e .
 
 - Checkov is wired directly into the Python workflow.
 - Trivy is used when available as an external CLI.
+- The agent can use `search_controls` to retrieve relevant CIS, NSA, and AWS controls from the local Chroma index.
 - The `review` command prints the report to stdout.
 - `--output` writes that report to a file such as `report.md`.
 - `--max-fix-attempts` bounds remediation retries and prevents infinite fix loops.

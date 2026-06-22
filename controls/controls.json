@@ -1,0 +1,248 @@
+[
+  {
+    "id": "CIS-5.2.5",
+    "title": "Minimize admission of privileged containers",
+    "text": "A privileged container can access host devices and kernel capabilities and effectively runs as root on the node, breaking the isolation between the container and the host. Set securityContext.privileged to false and only request privileged mode when there is no alternative.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.6",
+    "title": "Minimize containers allowing privilege escalation",
+    "text": "Containers should set allowPrivilegeEscalation to false so a process cannot gain more privileges than its parent process. Allowing escalation lets a compromised process move toward root and weakens the security boundary.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.7",
+    "title": "Minimize admission of root containers",
+    "text": "Containers should run as a non-root user by setting runAsNonRoot to true and providing a fixed non-zero runAsUser. Running as root increases the blast radius of a container escape because the attacker inherits root on the node.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.4",
+    "title": "Minimize containers sharing the host network namespace",
+    "text": "Setting hostNetwork to true places the pod directly on the node network, bypassing network policies and exposing host interfaces. Avoid hostNetwork unless a workload genuinely needs node-level network access.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.2",
+    "title": "Minimize containers sharing the host process namespace",
+    "text": "hostPID lets a container see and interact with all processes on the node, which can be used to read secrets from other processes or interfere with the host. Leave hostPID unset (false) for normal workloads.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.3",
+    "title": "Minimize containers sharing the host IPC namespace",
+    "text": "hostIPC gives a container access to the node's inter-process communication, allowing it to read or tamper with shared memory used by other processes. Keep hostIPC disabled unless explicitly required.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.8",
+    "title": "Drop the NET_RAW capability",
+    "text": "The NET_RAW capability allows crafting raw packets, which enables spoofing and certain network attacks from inside a pod. Drop NET_RAW (and ideally all capabilities) unless the workload needs low-level network access.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.9",
+    "title": "Minimize containers with added capabilities",
+    "text": "Adding Linux capabilities beyond the default set expands what a compromised container can do on the node. Containers should not add capabilities unless each one is justified and documented.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.10",
+    "title": "Drop all capabilities and add back only what is needed",
+    "text": "The safest baseline is securityContext.capabilities.drop set to ALL, then adding back only the specific capabilities a workload requires. Starting from a full capability set leaves unnecessary privileges available to an attacker.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.11",
+    "title": "Apply a seccomp profile",
+    "text": "A seccomp profile restricts the system calls a container can make, shrinking the kernel attack surface. Set seccompProfile to RuntimeDefault (or a tailored profile) rather than leaving it unconfined.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.2.12",
+    "title": "Minimize use of hostPath volumes",
+    "text": "hostPath volumes mount a directory from the node into the pod, which can expose sensitive host files or allow writing to the host filesystem. Prefer ephemeral or managed volume types and avoid hostPath where possible.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "NSA-ReadOnlyRootFS",
+    "title": "Use a read-only root filesystem",
+    "text": "Setting readOnlyRootFilesystem to true prevents an attacker who gains code execution from writing to the container filesystem, limiting persistence and tampering. Mount writable paths explicitly as separate volumes where the app needs them.",
+    "source": "NSA/CISA Kubernetes Hardening Guide"
+  },
+  {
+    "id": "NSA-DefaultDenyNetworkPolicy",
+    "title": "Apply a default-deny network policy",
+    "text": "By default all pods can talk to all other pods. A default-deny NetworkPolicy per namespace, with explicit allow rules, limits how far an attacker can move laterally after compromising one pod.",
+    "source": "NSA/CISA Kubernetes Hardening Guide"
+  },
+  {
+    "id": "CIS-5.3.2",
+    "title": "Define network policies for each namespace",
+    "text": "Each namespace should have NetworkPolicies controlling ingress and egress so traffic between workloads is restricted to what is intended. Without them, a compromised service can reach every other service in the cluster.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.1.1",
+    "title": "Minimize use of the cluster-admin role",
+    "text": "cluster-admin grants unrestricted access to the entire cluster. Bind it to as few subjects as possible and prefer narrowly scoped roles, so a compromised account cannot take over the cluster.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.1.3",
+    "title": "Minimize wildcard use in Roles and ClusterRoles",
+    "text": "Using wildcards (*) for verbs, resources, or apiGroups grants broad, often unintended permissions. Roles should list the specific actions and resources required, following least privilege.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.1.5",
+    "title": "Do not use the default service account for workloads",
+    "text": "The default service account is shared and easy to over-permission. Create dedicated service accounts per workload so permissions can be scoped and audited independently.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.1.6",
+    "title": "Mount service account tokens only when required",
+    "text": "Automatically mounting the service account token into every pod exposes API credentials a workload may not need. Set automountServiceAccountToken to false unless the pod actually calls the Kubernetes API.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.4.1",
+    "title": "Prefer mounting secrets as files over environment variables",
+    "text": "Secrets passed as environment variables are easier to leak through logs, crash dumps, or child processes. Mounting secrets as files reduces accidental exposure and supports rotation.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CIS-5.7.4",
+    "title": "Do not deploy workloads to the default namespace",
+    "text": "The default namespace makes it hard to apply scoped policies and RBAC. Place workloads in named namespaces so network policies, quotas, and access controls can be applied cleanly.",
+    "source": "CIS Kubernetes Benchmark"
+  },
+  {
+    "id": "CKV_K8S_8",
+    "title": "Define a liveness probe",
+    "text": "A liveness probe lets Kubernetes detect and restart a hung container. Without it, a wedged process can keep receiving traffic while failing, hurting reliability.",
+    "source": "Checkov operational policy"
+  },
+  {
+    "id": "CKV_K8S_9",
+    "title": "Define a readiness probe",
+    "text": "A readiness probe stops traffic being routed to a pod until it can actually serve requests. Missing it causes errors during startup, deploys, and recovery.",
+    "source": "Checkov operational policy"
+  },
+  {
+    "id": "CKV_K8S_10",
+    "title": "Set CPU requests",
+    "text": "CPU requests tell the scheduler how much CPU a pod needs, enabling sensible placement and fair sharing. Without requests, a noisy neighbour can starve other workloads.",
+    "source": "Checkov operational policy"
+  },
+  {
+    "id": "CKV_K8S_11",
+    "title": "Set CPU limits",
+    "text": "CPU limits cap how much CPU a container can consume, preventing a single workload from monopolising a node. Set limits appropriate to the workload to protect cluster stability.",
+    "source": "Checkov operational policy"
+  },
+  {
+    "id": "CKV_K8S_12",
+    "title": "Set memory requests",
+    "text": "Memory requests inform scheduling and protect against overcommitment. Without them the scheduler cannot reason about a pod's memory footprint, risking evictions.",
+    "source": "Checkov operational policy"
+  },
+  {
+    "id": "CKV_K8S_13",
+    "title": "Set memory limits",
+    "text": "Memory limits prevent a container from consuming all node memory and triggering out-of-memory kills of other pods. Define limits so one workload cannot destabilise the node.",
+    "source": "Checkov operational policy"
+  },
+  {
+    "id": "CKV_K8S_14",
+    "title": "Pin image tags instead of using latest",
+    "text": "Using the latest tag (or no tag) means the running image can change unexpectedly between pulls, making deployments non-reproducible and complicating rollback. Reference a specific, immutable tag.",
+    "source": "Checkov supply-chain policy"
+  },
+  {
+    "id": "CKV_K8S_15",
+    "title": "Set imagePullPolicy to Always for mutable tags",
+    "text": "If a tag can change, imagePullPolicy should be Always so nodes do not silently run a stale cached image. With pinned digests this matters less, but mutable tags need a fresh pull.",
+    "source": "Checkov supply-chain policy"
+  },
+  {
+    "id": "CKV_K8S_43",
+    "title": "Reference images by digest",
+    "text": "Pinning an image by its SHA256 digest guarantees the exact bytes that run, defeating tag mutation and tampering. Prefer image@sha256:... over a tag for production workloads.",
+    "source": "Checkov supply-chain policy"
+  },
+  {
+    "id": "CKV_K8S_22",
+    "title": "Use a read-only root filesystem where possible",
+    "text": "A read-only root filesystem blocks an attacker from modifying binaries or dropping tools inside the container. Combine it with explicit writable volumes for any paths the app legitimately writes to.",
+    "source": "Checkov hardening policy"
+  },
+  {
+    "id": "CKV_K8S_37",
+    "title": "Minimize container capabilities",
+    "text": "Containers should drop all Linux capabilities and add back only those strictly needed. Excess capabilities give a compromised container more ways to affect the node.",
+    "source": "Checkov hardening policy"
+  },
+  {
+    "id": "AWS-S3-PublicAccess",
+    "title": "Block public access on S3 buckets",
+    "text": "S3 buckets should enable the account- and bucket-level public access block settings so objects are not unintentionally exposed to the internet. Public buckets are a frequent source of data leaks.",
+    "source": "CIS AWS Foundations / Checkov"
+  },
+  {
+    "id": "AWS-S3-Encryption",
+    "title": "Enable encryption at rest for S3 buckets",
+    "text": "S3 buckets should have default server-side encryption enabled so stored objects are encrypted at rest. This protects data if the underlying storage is ever exposed.",
+    "source": "CIS AWS Foundations / Checkov"
+  },
+  {
+    "id": "AWS-SG-OpenIngress",
+    "title": "Avoid unrestricted ingress to administrative ports",
+    "text": "Security groups should not allow 0.0.0.0/0 ingress to sensitive ports such as SSH (22) or RDP (3389). Open admin ports are scanned and brute-forced constantly; restrict to known source ranges.",
+    "source": "CIS AWS Foundations / Checkov"
+  },
+  {
+    "id": "AWS-IAM-Wildcard",
+    "title": "Avoid wildcard actions and resources in IAM policies",
+    "text": "IAM policies that grant Action: * or Resource: * give far more access than usually intended. Scope policies to the specific actions and ARNs required, following least privilege.",
+    "source": "CIS AWS Foundations / Checkov"
+  },
+  {
+    "id": "AWS-RDS-Encryption",
+    "title": "Enable encryption for RDS storage",
+    "text": "RDS instances should have storage encryption enabled so database data is encrypted at rest. Encryption must be set at creation time, so it belongs in the infrastructure definition.",
+    "source": "CIS AWS Foundations / Checkov"
+  },
+  {
+    "id": "AWS-EBS-Encryption",
+    "title": "Encrypt EBS volumes",
+    "text": "EBS volumes should be encrypted so data on disk and in snapshots is protected. Enabling account-level default EBS encryption is a simple way to enforce this everywhere.",
+    "source": "CIS AWS Foundations / Checkov"
+  },
+  {
+    "id": "TF-HardcodedSecrets",
+    "title": "Do not hardcode secrets in infrastructure code",
+    "text": "API keys, passwords, and tokens should never be committed in Terraform or manifests. Use a secrets manager or injected variables so credentials are not exposed in version control.",
+    "source": "Checkov secrets policy"
+  },
+  {
+    "id": "DOCKER-NonRootUser",
+    "title": "Run the container as a non-root user",
+    "text": "A Dockerfile should set a non-root USER so the container does not run as root by default. Running as root amplifies the impact of any container breakout.",
+    "source": "CIS Docker Benchmark / Checkov"
+  },
+  {
+    "id": "DOCKER-PinnedBaseImage",
+    "title": "Pin base image versions",
+    "text": "Base images should be referenced by a specific version or digest rather than latest, so builds are reproducible and you control when the base changes. Floating tags lead to surprise breakage and drift.",
+    "source": "CIS Docker Benchmark / Checkov"
+  },
+  {
+    "id": "DOCKER-NoSecretsInImage",
+    "title": "Do not bake secrets into images",
+    "text": "Secrets copied into image layers remain retrievable from the image history even if later deleted. Pass secrets at runtime or via build secrets rather than embedding them in the image.",
+    "source": "CIS Docker Benchmark / Checkov"
+  }
+]
