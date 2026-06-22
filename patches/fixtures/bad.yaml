@@ -1,42 +1,8 @@
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: web-netpol
-  namespace: production
-spec:
-  podSelector:
-    matchLabels:
-      app: web
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              name: production
-      ports:
-        - protocol: TCP
-          port: 80
-  egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              name: production
-      ports:
-        - protocol: TCP
-          port: 53
-    - to:
-        - podSelector: {}
-      ports:
-        - protocol: TCP
-          port: 443
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web
-  namespace: production
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -47,49 +13,41 @@ spec:
       labels:
         app: web
     spec:
-      automountServiceAccountToken: false
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsReadOnlyRootFilesystem: true
         seccompProfile:
           type: RuntimeDefault
+      automountServiceAccountToken: false
       containers:
         - name: web
-          image: nginx@sha256:67682bda82bfff617c58d1f7409f76869a0bcc6e6b5e7ad6e60e9edf3340af
+          image: nginx:1.21.6
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
             runAsNonRoot: true
-            runAsUser: 65534
-            runAsGroup: 65534
+            runAsUser: 1000
             readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: 100m
+              memory: 128Mi
             limits:
-              cpu: "500m"
-              memory: "256Mi"
-          livenessProbe:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
             httpGet:
               path: /
               port: 80
             initialDelaySeconds: 10
             periodSeconds: 10
-          readinessProbe:
+          livenessProbe:
             httpGet:
               path: /
               port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          volumeMounts:
-            - name: tmpdir
-              mountPath: /var/run
-            - name: cachedir
-              mountPath: /var/cache/nginx
-      volumes:
-        - name: tmpdir
-          emptyDir: {}
-        - name: cachedir
-          emptyDir: {}
+            initialDelaySeconds: 30
+            periodSeconds: 10

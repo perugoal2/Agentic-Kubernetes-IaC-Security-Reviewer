@@ -99,6 +99,14 @@ def run_trivy(path: str) -> dict:
                 "guideline": m.get("PrimaryURL"), "resource": m.get("CauseMetadata", {}).get("Resource"),
             })
     return {"tool": "trivy", "count": len(findings), "findings": findings}
+
+
+def scan_findings(path: str) -> list[dict]:
+    findings = []
+    for runner in (run_checkov, run_trivy):
+        result = runner(path)
+        findings.extend(result.get("findings", []))
+    return findings
     
 PATCH_DIR = "patches"
 
@@ -141,8 +149,8 @@ def propose_patch(path: str, fixed_content: str, root_path: str | None = None) -
     }
 
 def validate_patch(original_path, patched_path):
-    before = run_checkov(original_path)["findings"]
-    after  = run_checkov(patched_path)["findings"]
+    before = scan_findings(original_path)
+    after  = scan_findings(patched_path)
     before_ids = {(f["id"], f["resource"]) for f in before}
     after_ids  = {(f["id"], f["resource"]) for f in after}
     return {

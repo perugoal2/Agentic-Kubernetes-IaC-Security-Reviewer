@@ -43,15 +43,19 @@ class DirectoryPatchTests(unittest.TestCase):
         original_root.mkdir()
         patched_root.mkdir()
 
-        before_findings = [{"id": "CKV_1", "resource": "deployment"}, {"id": "CKV_2", "resource": "service"}]
-        after_findings = [{"id": "CKV_2", "resource": "service"}, {"id": "CKV_3", "resource": "ingress"}]
+        before_checkov = [{"id": "CKV_1", "resource": "deployment"}, {"id": "CKV_2", "resource": "service"}]
+        after_checkov = [{"id": "CKV_2", "resource": "service"}, {"id": "CKV_3", "resource": "ingress"}]
+        before_trivy = [{"id": "KSV_1", "resource": "deployment"}]
+        after_trivy = [{"id": "KSV_1", "resource": "deployment"}, {"id": "KSV_2", "resource": "pod"}]
 
-        with patch.object(tools, "run_checkov", side_effect=[{"findings": before_findings}, {"findings": after_findings}]):
+        with patch.object(tools, "run_checkov", side_effect=[{"findings": before_checkov}, {"findings": after_checkov}]), patch.object(
+            tools, "run_trivy", side_effect=[{"findings": before_trivy}, {"findings": after_trivy}]
+        ):
             result = tools.validate_patch(str(original_root), str(patched_root))
 
         self.assertEqual(set(result["resolved"]), {("CKV_1", "deployment")})
-        self.assertEqual(set(result["remaining"]), {("CKV_2", "service"), ("CKV_3", "ingress")})
-        self.assertEqual(set(result["new"]), {("CKV_3", "ingress")})
+        self.assertEqual(set(result["remaining"]), {("CKV_2", "service"), ("CKV_3", "ingress"), ("KSV_1", "deployment"), ("KSV_2", "pod")})
+        self.assertEqual(set(result["new"]), {("CKV_3", "ingress"), ("KSV_2", "pod")})
         self.assertFalse(result["success"])
 
 

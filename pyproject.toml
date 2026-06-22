@@ -18,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 review = "cli:run"
+evaluate = "cli:run_evaluate"
 
 [tool.setuptools]
-py-modules = ["agent", "cli", "tools"]
+py-modules = ["agent", "cli", "eval", "tools"]
