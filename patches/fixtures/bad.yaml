@@ -1,37 +1,3 @@
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: web-netpol
-  namespace: production
-spec:
-  podSelector:
-    matchLabels:
-      app: web
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              name: production
-      ports:
-        - protocol: TCP
-          port: 80
-  egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              name: production
-      ports:
-        - protocol: TCP
-          port: 53
-    - to:
-        - podSelector: {}
-      ports:
-        - protocol: TCP
-          port: 443
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -49,28 +15,27 @@ spec:
     spec:
       automountServiceAccountToken: false
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: web
-          image: nginx@sha256:67682bda82bfff617c58d1f7409f76869a0bcc6e6b5e7ad6e60e9edf3340af
+          image: nginx:1.25.3
           securityContext:
-            privileged: false
             allowPrivilegeEscalation: false
-            runAsNonRoot: true
-            runAsUser: 65534
-            runAsGroup: 65534
+            privileged: false
             readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
           resources:
             requests:
-              cpu: "100m"
-              memory: "128Mi"
+              cpu: 250m
+              memory: 256Mi
             limits:
-              cpu: "500m"
-              memory: "256Mi"
+              cpu: 500m
+              memory: 512Mi
           livenessProbe:
             httpGet:
               path: /
@@ -84,12 +49,16 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
           volumeMounts:
-            - name: tmpdir
-              mountPath: /var/run
-            - name: cachedir
+            - name: tmp
+              mountPath: /tmp
+            - name: var-cache-nginx
               mountPath: /var/cache/nginx
+            - name: var-run-nginx
+              mountPath: /var/run/nginx
       volumes:
-        - name: tmpdir
+        - name: tmp
           emptyDir: {}
-        - name: cachedir
+        - name: var-cache-nginx
+          emptyDir: {}
+        - name: var-run-nginx
           emptyDir: {}

@@ -8,6 +8,18 @@ load_dotenv()
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
+
+def _anthropic_cache_control() -> dict | None:
+    enabled = os.getenv("ANTHROPIC_PROMPT_CACHE", "1").strip().lower()
+    if enabled in {"0", "false", "no", "off"}:
+        return None
+
+    ttl = os.getenv("ANTHROPIC_PROMPT_CACHE_TTL", "").strip()
+    if ttl:
+        return {"type": "ephemeral", "ttl": ttl}
+
+    return {"type": "ephemeral"}
+
 tools = [
     {
         "name": "run_checkov",
@@ -69,6 +81,10 @@ Rules:
 - Re-rank by REAL risk in context, not just the scanner's severity label.
 - For each top finding: explain the risk in one sentence and give a concrete fix.
 - Be concise. Group by severity.
+- Format the final report as markdown using this exact section order: `## CRITICAL`, `## HIGH`, `## MEDIUM`, `## LOW`, `## INFO`.
+- Omit empty severity sections.
+- Under each severity section, use bullets with `Finding:`, `Risk:`, `Fix:`, and `Control:` when a control citation is available.
+- End with a `## Remediation Status` section that states whether a patched copy was staged and whether validation succeeded.
 
 After reporting findings, remediate the affected files and then validate the patch.
 To remediate files:
@@ -82,6 +98,21 @@ If validate_patch reports remaining or new issues and attempts_left is above 0, 
 When success is true, or attempts_left is 0, stop patching and give a final summary.
 You have at most {max_fix_attempts} remediation attempts.
 For each top finding, call search_controls with the finding text and cite the returned control id and title.
+"""
+
+
+def build_remediation_prompt(max_fix_attempts: int) -> str:
+    return f"""You are a Kubernetes/IaC security remediation agent.
+Given a single file path, remediate that file and stop.
+Rules:
+- Run the scanners as needed to understand the findings.
+- Read the file before patching it.
+- Minimize unrelated changes.
+- Call propose_patch with the FULL corrected file content.
+- Call validate_patch after each remediation attempt.
+- If validate_patch reports remaining or new issues and attempts_left is above 0, read the patched file and try again.
+- When success is true, or attempts_left is 0, stop patching and give a brief summary.
+You have at most {max_fix_attempts} remediation attempts.
 """
 
 
@@ -106,27 +137,40 @@ def _final_text(blocks) -> str:
     return "".join(block.text for block in blocks if block.type == "text")
 
 
-def review(path: str, max_fix_attempts: int = 3) -> str:
+def _run_agent_session(path: str, user_prompt: str, system_prompt: str, max_fix_attempts: int) -> dict:
     if max_fix_attempts < 1:
         raise ValueError("max_fix_attempts must be at least 1")
 
-    messages = [{"role": "user", "content": f"Please review the IaC at path: {path}"}]
+    messages = [{"role": "user", "content": user_prompt}]
     fix_attempts_used = 0
     patch_loop_closed = False
+    latest_patched_path = None
+    latest_patched_root = None
+    final_text = ""
+    cache_control = _anthropic_cache_control()
 
     for _ in range(MAX_AGENT_TURNS):
-        resp = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=20000,
-            tools=tools,
-            system=build_system_prompt(max_fix_attempts),
-            messages=messages,
-        )
+        request = {
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 20000,
+            "tools": tools,
+            "system": system_prompt,
+            "messages": messages,
+        }
+        if cache_control is not None:
+            request["cache_control"] = cache_control
+
+        resp = client.messages.create(**request)
 
         messages.append({"role": "assistant", "content": resp.content})
 
         if resp.stop_reason != "tool_use":
-            return _final_text(resp.content)
+            final_text = _final_text(resp.content)
+            return {
+                "text": final_text,
+                "patched_path": latest_patched_path,
+                "patched_root": latest_patched_root,
+            }
 
         control_messages = []
         results = []
@@ -145,6 +189,10 @@ def review(path: str, max_fix_attempts: int = 3) -> str:
                 }
             else:
                 result = run_tool(block.name, block.input)
+
+            if block.name == "propose_patch" and "error" not in result:
+                latest_patched_path = result.get("patched_path", latest_patched_path)
+                latest_patched_root = result.get("patched_root", latest_patched_root)
 
             if block.name == "validate_patch" and "error" not in result:
                 fix_attempts_used += 1
@@ -197,9 +245,34 @@ def review(path: str, max_fix_attempts: int = 3) -> str:
 
         messages.append({"role": "user", "content": results + control_messages})
 
-    return (
+    final_text = (
         "Review stopped before completion because the agent exceeded the maximum number of "
         f"tool turns ({MAX_AGENT_TURNS})."
     )
+    return {
+        "text": final_text,
+        "patched_path": latest_patched_path,
+        "patched_root": latest_patched_root,
+    }
+
+
+def review(path: str, max_fix_attempts: int = 3) -> str:
+    result = _run_agent_session(
+        path=path,
+        user_prompt=f"Please review the IaC at path: {path}",
+        system_prompt=build_system_prompt(max_fix_attempts),
+        max_fix_attempts=max_fix_attempts,
+    )
+    return result["text"]
+
+
+def remediate(path: str, max_fix_attempts: int = 3) -> str | None:
+    result = _run_agent_session(
+        path=path,
+        user_prompt=f"Please remediate the IaC file at path: {path}",
+        system_prompt=build_remediation_prompt(max_fix_attempts),
+        max_fix_attempts=max_fix_attempts,
+    )
+    return result["patched_path"]
 
         

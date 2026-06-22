@@ -186,6 +186,114 @@
     "source": "Checkov hardening policy"
   },
   {
+    "id": "KSV-0001",
+    "title": "Disallow privilege escalation",
+    "text": "Containers should set allowPrivilegeEscalation to false so a process cannot gain more privileges than its parent. Allowing privilege escalation makes it easier for an attacker to move from a compromised process toward root.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0003",
+    "title": "Drop all default capabilities",
+    "text": "Containers should drop ALL Linux capabilities and then add back only the narrow set they actually need. Leaving the default capability set in place gives an attacker more primitives if the container is compromised.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0004",
+    "title": "Do not leave default capabilities intact",
+    "text": "A container should not run with the unmodified default Linux capability set. Explicitly dropping capabilities reduces the blast radius of container escape and privilege misuse.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0011",
+    "title": "Set CPU limits",
+    "text": "CPU limits cap how much processor time a container can consume, preventing one workload from monopolising node capacity. Define realistic limits to protect cluster stability.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0012",
+    "title": "Do not run containers as root",
+    "text": "Containers should run as a non-root user by setting runAsNonRoot to true and using a fixed non-zero runAsUser. Running as root greatly increases the impact of any container escape or application compromise.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0013",
+    "title": "Avoid latest image tags",
+    "text": "Using the latest image tag makes deployments non-reproducible and allows image contents to change without review. Reference a specific immutable tag or digest instead.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0014",
+    "title": "Use a read-only root filesystem",
+    "text": "A read-only root filesystem makes it harder for an attacker to modify binaries or persist tools inside the container. Mount only the specific writable paths an application needs.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0015",
+    "title": "Set CPU requests",
+    "text": "CPU requests tell the scheduler how much processor time a pod needs and help prevent starvation by noisy neighbours. Every workload should declare a sensible baseline request.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0016",
+    "title": "Set memory requests",
+    "text": "Memory requests inform placement decisions and reduce the risk of scheduling too many workloads onto one node. Without requests, eviction and instability become more likely under pressure.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0017",
+    "title": "Do not run privileged containers",
+    "text": "Privileged containers can access host devices and kernel features and effectively break container isolation. Keep privileged set to false unless there is a tightly justified operational requirement.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0018",
+    "title": "Set memory limits",
+    "text": "Memory limits stop one container from exhausting node memory and impacting other workloads. Set limits appropriate to the service so runaway memory growth is contained.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0020",
+    "title": "Use a non-root UID above 10000",
+    "text": "Workloads should run with a fixed high, non-zero UID rather than root or low-numbered users. A higher dedicated UID reduces overlap with privileged host accounts and supports least privilege.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0021",
+    "title": "Use a non-root GID above 10000",
+    "text": "Containers should run with a dedicated, non-root group ID that is not in the low privileged system range. Using a high GID reduces the chance of inheriting sensitive host or image group semantics.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0030",
+    "title": "Set RuntimeDefault seccomp profile",
+    "text": "Containers should set seccompProfile to RuntimeDefault or a tailored local profile to restrict available system calls. Leaving seccomp unset exposes a larger kernel attack surface.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0104",
+    "title": "Do not disable seccomp enforcement",
+    "text": "Seccomp should remain enabled so containers are constrained to an expected system-call surface. Disabling seccomp removes a key kernel hardening control.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0106",
+    "title": "Restrict added capabilities to NET_BIND_SERVICE only when needed",
+    "text": "If a workload must add Linux capabilities, NET_BIND_SERVICE should usually be the only one allowed for binding to low ports. Additional capabilities expand the actions an attacker can take after compromise.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0110",
+    "title": "Do not deploy workloads to the default namespace",
+    "text": "The default namespace makes it harder to apply clean RBAC, quotas, and network policies. Place workloads in dedicated namespaces so security boundaries can be managed explicitly.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
+    "id": "KSV-0118",
+    "title": "Define a default container security context",
+    "text": "Every workload should set an explicit securityContext baseline, including non-root execution and other hardening defaults, so safe settings are not left to image or platform defaults. A missing security context leads to inconsistent and weaker runtime posture.",
+    "source": "Trivy Kubernetes Security Checks"
+  },
+  {
     "id": "AWS-S3-PublicAccess",
     "title": "Block public access on S3 buckets",
     "text": "S3 buckets should enable the account- and bucket-level public access block settings so objects are not unintentionally exposed to the internet. Public buckets are a frequent source of data leaks.",
