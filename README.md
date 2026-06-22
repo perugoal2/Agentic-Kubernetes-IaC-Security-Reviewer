@@ -27,6 +27,7 @@ Most scanner output is accurate but noisy. This project keeps the scanner signal
 | Checkov integration | Scans Kubernetes and IaC config with structured output |
 | Trivy integration | Uses Trivy config scanning when available on your machine |
 | File output | Save the generated report with `--output` or `-o` |
+| Colorized severity view | Prints grouped severity sections with terminal colors for faster triage |
 | Local-first workflow | Works from your repo and your existing Python virtualenv |
 
 ## What It Reviews
@@ -205,14 +206,25 @@ review .\manifests
 
 ## Example Output
 
-The CLI produces a markdown-style report like this:
+The CLI prints a markdown-style report grouped by severity. In a terminal, severity headings are colorized for faster triage. When you save with `--output`, the written file stays plain markdown.
 
 ```text
 ## IaC Security Review Report
 
-CRITICAL: Privileged container configuration
-Risk: Container escape and host compromise.
-Fix: Set privileged to false and disable privilege escalation.
+## CRITICAL
+- Finding: Privileged container configuration
+	Risk: Container escape and host compromise.
+	Fix: Set privileged to false and disable privilege escalation.
+	Control: CIS Kubernetes Benchmark 5.2.1
+
+## HIGH
+- Finding: Missing resource limits
+	Risk: A single pod can starve other workloads and trigger avoidable instability.
+	Fix: Add CPU and memory requests and limits.
+
+## Remediation Status
+- Patched copy staged under `patches/fixtures/bad.yaml`
+- Validation succeeded on attempt 1
 ```
 
 That report is separate from any remediated file copies written under `patches/`.
@@ -287,7 +299,7 @@ python -m pip install -e .
 - Checkov is wired directly into the Python workflow.
 - Trivy is used when available as an external CLI.
 - The agent can use `search_controls` to retrieve relevant CIS, NSA, and AWS controls from the local Chroma index.
-- The `review` command prints the report to stdout.
+- The `review` command prints a severity-grouped report to stdout and colorizes severity headings when the terminal supports color.
 - `--output` writes that report to a file such as `report.md`.
 - `--max-fix-attempts` bounds remediation retries and prevents infinite fix loops.
 - Directory remediation preserves relative paths in `patches/` so the agent can stage multi-file fixes safely.

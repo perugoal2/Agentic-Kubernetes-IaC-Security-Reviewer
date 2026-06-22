@@ -81,6 +81,10 @@ Rules:
 - Re-rank by REAL risk in context, not just the scanner's severity label.
 - For each top finding: explain the risk in one sentence and give a concrete fix.
 - Be concise. Group by severity.
+- Format the final report as markdown using this exact section order: `## CRITICAL`, `## HIGH`, `## MEDIUM`, `## LOW`, `## INFO`.
+- Omit empty severity sections.
+- Under each severity section, use bullets with `Finding:`, `Risk:`, `Fix:`, and `Control:` when a control citation is available.
+- End with a `## Remediation Status` section that states whether a patched copy was staged and whether validation succeeded.
 
 After reporting findings, remediate the affected files and then validate the patch.
 To remediate files:

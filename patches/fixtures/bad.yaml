@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web
-  namespace: default
+  namespace: production
 spec:
   replicas: 1
   selector:
@@ -13,41 +13,52 @@ spec:
       labels:
         app: web
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        fsReadOnlyRootFilesystem: true
+        runAsUser: 65534
         seccompProfile:
           type: RuntimeDefault
-      automountServiceAccountToken: false
       containers:
         - name: web
-          image: nginx:1.21.6
+          image: nginx:1.25.3
           securityContext:
-            privileged: false
             allowPrivilegeEscalation: false
-            runAsNonRoot: true
-            runAsUser: 1000
+            privileged: false
             readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 250m
+              memory: 256Mi
             limits:
               cpu: 500m
               memory: 512Mi
-          readinessProbe:
+          livenessProbe:
             httpGet:
               path: /
               port: 80
             initialDelaySeconds: 10
             periodSeconds: 10
-          livenessProbe:
+          readinessProbe:
             httpGet:
               path: /
               port: 80
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: var-cache-nginx
+              mountPath: /var/cache/nginx
+            - name: var-run-nginx
+              mountPath: /var/run/nginx
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: var-cache-nginx
+          emptyDir: {}
+        - name: var-run-nginx
+          emptyDir: {}
