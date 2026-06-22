@@ -8,6 +8,18 @@ load_dotenv()
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
+
+def _anthropic_cache_control() -> dict | None:
+    enabled = os.getenv("ANTHROPIC_PROMPT_CACHE", "1").strip().lower()
+    if enabled in {"0", "false", "no", "off"}:
+        return None
+
+    ttl = os.getenv("ANTHROPIC_PROMPT_CACHE_TTL", "").strip()
+    if ttl:
+        return {"type": "ephemeral", "ttl": ttl}
+
+    return {"type": "ephemeral"}
+
 tools = [
     {
         "name": "run_checkov",
@@ -131,15 +143,20 @@ def _run_agent_session(path: str, user_prompt: str, system_prompt: str, max_fix_
     latest_patched_path = None
     latest_patched_root = None
     final_text = ""
+    cache_control = _anthropic_cache_control()
 
     for _ in range(MAX_AGENT_TURNS):
-        resp = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=20000,
-            tools=tools,
-            system=system_prompt,
-            messages=messages,
-        )
+        request = {
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 20000,
+            "tools": tools,
+            "system": system_prompt,
+            "messages": messages,
+        }
+        if cache_control is not None:
+            request["cache_control"] = cache_control
+
+        resp = client.messages.create(**request)
 
         messages.append({"role": "assistant", "content": resp.content})
 
